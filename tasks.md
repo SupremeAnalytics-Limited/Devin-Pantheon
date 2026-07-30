@@ -5,11 +5,14 @@
 - [x] Confirm phone number: `+1 437 525 4343` is the live business-card number.
 - [x] Decide employee-vs-customer call routing → Devin asks at the start of the call.
 - [x] Decide employee onboarding email timing → right after the call ends (post-call webhook), not mid-call.
-- [ ] Migrate `SYNTHFLOW_API_KEY` from `config/credentials.json` (plaintext) to a Cloudflare Worker secret.
-- [ ] Set up D1 database for CarSpa call logs (with customer/employee call-type distinction).
-- [ ] Build and deploy the Synthflow webhook worker (`call_inbound` + post-call events), following the `vibe-devin-brain-production` pattern, with customer-intake and employee-onboarding branches.
-- [ ] Build the Calendly `invitee.created` webhook endpoint.
-- [ ] Get employee onboarding email content/materials from Simon; wire into post-call email send (data capture ships first, real content lands later).
+- [x] Set up D1 database for CarSpa call logs → `carspa-calls` (uuid `7858276e-f1f8-4649-be27-76d664c09efe`), `calls` + `bookings` tables live.
+- [x] Build the Synthflow webhook worker code (`call_inbound` + post-call events, customer/employee branch) and the Calendly `invitee.created`/`invitee.canceled` webhook endpoint — both in `carspa-synthflow-worker/`, type-checks clean.
+- [ ] **Deploy the worker** (`wrangler deploy`) — blocked: no `wrangler` CLI or Cloudflare API token available in this build sandbox. Needs Simon's machine, or a `CLOUDFLARE_API_TOKEN` handed to this session.
+- [ ] Migrate `SYNTHFLOW_API_KEY` from `config/credentials.json` (plaintext) to a Cloudflare Worker secret — same deploy-access blocker.
+- [ ] Point Synthflow's inbound + post-call webhooks at the deployed worker URL; configure information extractor fields (`caller_type`, `name`, `service_requested`, `role`, `email`) on the CarSpa agent.
+- [ ] Create the Calendly `invitee.created`/`invitee.canceled` webhook subscription (dashboard or API — not exposed by this session's Calendly MCP tools) and store the returned signing key as `CALENDLY_WEBHOOK_SIGNING_KEY`.
+- [ ] Verify actual Synthflow payload field names against a real call — `docs.synthflow.ai` was unreachable from this build session (network policy blocked the host), so current field-name assumptions in `src/index.ts` are best-effort.
+- [ ] Get employee onboarding email content/materials from Simon; decide the sending provider (worker defaults to Resend if configured) and wire in real content.
 - [ ] Revisit Calendly Team/Round Robin pricing once staff (Node 2+) exist.
 
 ## Archived Tasks (Car Brokerage Pilot — Paused)

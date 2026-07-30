@@ -11,14 +11,15 @@ Devin is an AI voice intake and dispatch agent for **CarSpa**, Simon Onabanjo's 
 - **Calendly:** Event type "CarSpa's Detailing Calendar", account `supremeesimon@gmail.com`, timezone America/Denver.
 
 ## Current Status
-- **Phase:** Build (pre-launch). Architecture agreed; Synthflow webhook worker not yet deployed.
+- **Phase:** Build (pre-launch). Worker code written and D1 live; not yet deployed to Cloudflare.
 - **Voice platform:** Synthflow, chosen over VAPI for Canadian phone number support.
 - **Phone number:** `+1 437 525 4343` — this is the live business-card number, already provisioned (reused from the retired brokerage pilot; same account/key, new agent config).
 - **Post-call follow-up channel:** **SMS** (decided — via Synthflow's native post-call action, not a separate Twilio/Resend integration).
 - **Employee onboarding channel (new):** Same phone number now serves two intents. Devin asks at the start of the call whether the caller is booking a detail (customer) or joining the team (employee), then branches. Employee calls: capture name/contact/role during the call, log to D1; **onboarding email content is not yet defined** (Simon to provide materials) — build the data-capture + post-call email trigger plumbing now, wire in real email content later. Email sends after the call ends (post-call webhook), same timing pattern as the customer SMS.
 - **Cloudflare account:** 12 Workers already deployed under the broader "Devin v1.1" marketing/automation OS (SupremeAnalytics). Pattern to follow for the new worker: `vibe-devin-brain-production` (webhook receiver → verify → process → D1 log → optional Claude-in-the-loop decision → respond).
-- **D1 databases live:** `vibe-devin`, `vibe-whatsapp`, `vibe-orders`. None yet for CarSpa call logs — needs creating.
-- **No CarSpa worker code exists yet** in Cloudflare or in this repo as of this session.
+- **D1 databases live:** `vibe-devin`, `vibe-whatsapp`, `vibe-orders`, and now **`carspa-calls`** (uuid `7858276e-f1f8-4649-be27-76d664c09efe`) with `calls` + `bookings` tables/indexes applied.
+- **Worker code exists** at `carspa-synthflow-worker/` in this repo (routes: `/synthflow-webhook`, `/calendly-webhook`), type-checks clean. **Not yet deployed** — this build session has no `wrangler` CLI or Cloudflare API token, only D1/KV/R2 management via MCP tools. Deployment needs Simon's machine or a `CLOUDFLARE_API_TOKEN` handed to a session that has `wrangler`.
+- **Docs access blocked:** `docs.synthflow.ai` and `docs.calendly.com` are unreachable from this build session (network policy blocks the hosts at the proxy). Payload field-name assumptions in the worker code are best-effort from Simon's own prior research — flagged with TODOs, need verifying against real traffic.
 
 ## Key Decisions Made
 - Synthflow over VAPI (Canadian numbers).

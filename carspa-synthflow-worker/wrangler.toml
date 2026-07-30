@@ -1,0 +1,17 @@
+name = "carspa-synthflow-worker"
+main = "src/index.ts"
+compatibility_date = "2026-07-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "carspa-calls"
+database_id = "7858276e-f1f8-4649-be27-76d664c09efe"
+
+[vars]
+CALENDLY_BOOKING_URL = "https://calendly.com/supremeesimon/carspa-s-detailing-calendar"
+
+# Secrets (set via `wrangler secret put <NAME>`, never here):
+#   SYNTHFLOW_WEBHOOK_TOKEN     - shared secret appended as ?token=... to the URL given to Synthflow (optional but recommended)
+#   CALENDLY_WEBHOOK_SIGNING_KEY - signing key returned when the Calendly webhook subscription is created
+#   RESEND_API_KEY              - only needed once an email provider is chosen for employee onboarding emails
+#   ONBOARDING_EMAIL_FROM       - "from" address for onboarding emails, paired with RESEND_API_KEY
