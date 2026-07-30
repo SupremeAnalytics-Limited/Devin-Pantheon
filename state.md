@@ -13,7 +13,9 @@ Devin is an AI voice intake and dispatch agent for **CarSpa**, Simon Onabanjo's 
 ## Current Status
 - **Phase:** Build (pre-launch). Architecture agreed; Synthflow webhook worker not yet deployed.
 - **Voice platform:** Synthflow, chosen over VAPI for Canadian phone number support.
+- **Phone number:** `+1 437 525 4343` — this is the live business-card number, already provisioned (reused from the retired brokerage pilot; same account/key, new agent config).
 - **Post-call follow-up channel:** **SMS** (decided — via Synthflow's native post-call action, not a separate Twilio/Resend integration).
+- **Employee onboarding channel (new):** Same phone number now serves two intents. Devin asks at the start of the call whether the caller is booking a detail (customer) or joining the team (employee), then branches. Employee calls: capture name/contact/role during the call, log to D1; **onboarding email content is not yet defined** (Simon to provide materials) — build the data-capture + post-call email trigger plumbing now, wire in real email content later. Email sends after the call ends (post-call webhook), same timing pattern as the customer SMS.
 - **Cloudflare account:** 12 Workers already deployed under the broader "Devin v1.1" marketing/automation OS (SupremeAnalytics). Pattern to follow for the new worker: `vibe-devin-brain-production` (webhook receiver → verify → process → D1 log → optional Claude-in-the-loop decision → respond).
 - **D1 databases live:** `vibe-devin`, `vibe-whatsapp`, `vibe-orders`. None yet for CarSpa call logs — needs creating.
 - **No CarSpa worker code exists yet** in Cloudflare or in this repo as of this session.
@@ -26,11 +28,12 @@ Devin is an AI voice intake and dispatch agent for **CarSpa**, Simon Onabanjo's 
 - Calendly stays strictly customer-facing bookings; Simon uses Google Calendar for personal time-blocking.
 
 ## Immediate Next Steps
-1. Get/confirm Synthflow API key and account access (Simon to provide as a Worker secret).
-2. Set up D1 database for call logs (`carspa-calls` or similar).
-3. Build and deploy the Synthflow webhook worker (`call_inbound` + post-call events).
+1. Migrate `SYNTHFLOW_API_KEY` out of `config/credentials.json` into a Cloudflare Worker secret (`wrangler secret put`) — currently sits in plaintext in the repo.
+2. Set up D1 database for call logs (`carspa-calls` or similar) — schema needs a `call_type` (customer vs employee) distinction.
+3. Build and deploy the Synthflow webhook worker (`call_inbound` + post-call events), with call-type branching for customer intake vs employee onboarding.
 4. Build the Calendly `invitee.created` webhook endpoint.
-5. Revisit Calendly Team/Round Robin pricing once staff exist (not urgent — Simon is still Node 1 only).
+5. Get employee onboarding email content from Simon once available; wire it into the post-call email send.
+6. Revisit Calendly Team/Round Robin pricing once staff exist (not urgent — Simon is still Node 1 only).
 
 ## Archived: Car Brokerage Pilot (Paused)
 Devin's original scope (Kijiji car-seller scraping, "Sarah" persona, finder's-fee brokerage) is paused, not active. See `README.md` for what's archived. Historical metrics from that pilot (kept for reference only, not current):
