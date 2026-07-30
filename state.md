@@ -1,29 +1,42 @@
 # Devin Pantheon State
 
 ## Project Overview
-Devin is an autonomous car brokerage agent designed to find private car sellers on Kijiji (Lethbridge, AB), match them with local dealership or cash-for-car buyers, and collect a $300–$500 finder’s fee per closed deal.
+Devin is an AI voice intake and dispatch agent for **CarSpa**, Simon Onabanjo's mobile car detailing business in Lethbridge, AB ($120/car, ~3hr per job). Devin answers the business-card phone number via Synthflow, onboards the customer, texts them the Calendly booking link, and becomes aware of bookings via a Calendly webhook.
+
+## Business Snapshot
+- **Booking history:** 9 total bookings since Aug 2025. 7 landed in a 5-week burst (Aug 20–Sep 27, 2025), then ~10 months dormant. Restarted July 27, 2026.
+- **Best-converting segment:** women/moms with kids — responds well to "I come to you, no need to find time for it."
+- **Recurring customer:** one male customer locked in for August 2026.
+- **Simon's availability:** Part-time Maintenance Supervisor at Chartwell Retirement Residences ($22.94/hr); CarSpa is paused while he stabilizes those hours. This build is prep work for when he returns to running CarSpa full force.
+- **Calendly:** Event type "CarSpa's Detailing Calendar", account `supremeesimon@gmail.com`, timezone America/Denver.
 
 ## Current Status
-- **Phase:** Mission-Ready (Production Sarah Live)
-- **Last Run:** 2026-04-16
-- **Status:** FULLY OPERATIONAL. 
-- **Sarah ID:** `0a420ae4-6d32-46b4-8c84-7f9315831736` (Live at +1 437 525 4343)
-- **Last Call:** 2026-04-16 (Call ID: `447cacf0-97a4-4a2a-8d2d-10a54b236bf0`)
-- **Webhook URL:** `https://8000-if1w718srqawckv2yug6k-a569c4d6.us2.manus.computer/webhook` (Verified)
-- **Co-Architect Power:** Sarah is now programmatically linked to the Manus API v2.
-- **Live Bridge:** Actions `GET_VEHICLE_IMAGES_PROD` and `dispatch_devin_v3` are attached to Sarah.
-- **Production Check:**
-    - `dispatch_devin_v3`: **Fully functional** (ID: `7154a9eb-3cd3-4ef3-91a6-a6e6ce6284af`). Fixed authentication headers and added dynamic caller/transcript payload.
-    - `Transcript Sync`: **Operational**. Manual sync script `fix_sarah_integration.py` successfully pulled the latest call from Kelly.
-    - `GET_VEHICLE_IMAGES_PROD`: **Fully functional** (ID: `a8e7bdd9-fd79-42b1-8826-730c439abcbf`). Correctly configured with `x-manus-api-key` header. Confirmed Sarah can access lead details (excluding phone number) via `verify_sarah_access_final.py` (Task ID: `YwSWBGGcTvdmRpXyFFy3vK`). *Note: A manual indexing script (`index_lead_prod.py`) is available for pilot testing to resolve 404 errors for specific leads.*
-- **Action Audit:** Verified and cleaned all duplicate actions. Sarah now has exactly 2 production actions attached.
+- **Phase:** Build (pre-launch). Architecture agreed; Synthflow webhook worker not yet deployed.
+- **Voice platform:** Synthflow, chosen over VAPI for Canadian phone number support.
+- **Post-call follow-up channel:** **SMS** (decided — via Synthflow's native post-call action, not a separate Twilio/Resend integration).
+- **Cloudflare account:** 12 Workers already deployed under the broader "Devin v1.1" marketing/automation OS (SupremeAnalytics). Pattern to follow for the new worker: `vibe-devin-brain-production` (webhook receiver → verify → process → D1 log → optional Claude-in-the-loop decision → respond).
+- **D1 databases live:** `vibe-devin`, `vibe-whatsapp`, `vibe-orders`. None yet for CarSpa call logs — needs creating.
+- **No CarSpa worker code exists yet** in Cloudflare or in this repo as of this session.
 
-## Key Metrics
+## Key Decisions Made
+- Synthflow over VAPI (Canadian numbers).
+- SMS over email for post-call Calendly link + flyer delivery.
+- No cold automated outreach — every reactivation call requires Simon's prior in-person/verbal consent.
+- API keys (Synthflow, etc.) go in as Cloudflare Worker secrets (`wrangler secret put`), never pasted into chat or committed to code.
+- Calendly stays strictly customer-facing bookings; Simon uses Google Calendar for personal time-blocking.
+
+## Immediate Next Steps
+1. Get/confirm Synthflow API key and account access (Simon to provide as a Worker secret).
+2. Set up D1 database for call logs (`carspa-calls` or similar).
+3. Build and deploy the Synthflow webhook worker (`call_inbound` + post-call events).
+4. Build the Calendly `invitee.created` webhook endpoint.
+5. Revisit Calendly Team/Round Robin pricing once staff exist (not urgent — Simon is still Node 1 only).
+
+## Archived: Car Brokerage Pilot (Paused)
+Devin's original scope (Kijiji car-seller scraping, "Sarah" persona, finder's-fee brokerage) is paused, not active. See `README.md` for what's archived. Historical metrics from that pilot (kept for reference only, not current):
 | Metric | Value |
 | :--- | :--- |
 | Total Listings Found | 1 |
 | Numbers Extracted | 1 (Kelly: +1 555 123 4567) |
-| Synthflow Calls Triggered | 0 (Standing by for inbound) |
 | Deals Closed | 0 |
 | Total Fees Collected | $0 |
-| Buyers in Database | 3 (Lethbridge Toyota, Bridge City Chrysler, Cash For Cars AB) |
