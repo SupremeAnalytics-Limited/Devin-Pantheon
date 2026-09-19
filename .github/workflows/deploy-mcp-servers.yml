@@ -1,0 +1,32 @@
+name: Deploy MCP Servers
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mcp-servers/**"
+      - ".github/workflows/deploy-mcp-servers.yml"
+  workflow_dispatch: {}
+
+jobs:
+  deploy-paystack-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: mcp-servers/paystack-mcp
+          command: deploy
+
+  deploy-manus-mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: mcp-servers/manus-mcp
+          command: deploy
