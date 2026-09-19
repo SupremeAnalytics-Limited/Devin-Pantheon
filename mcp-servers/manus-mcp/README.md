@@ -26,7 +26,8 @@ Manus API (`https://api.manus.ai`) as tools, running on Cloudflare Workers.
 | Tool | Description |
 |---|---|
 | `create_task` | Create a new Manus task with a prompt and optional project ID |
-| `get_task` | Fetch the status and result of a task by ID |
+| `get_task` | Fetch the status of a task by ID (metadata only, not its output) |
+| `get_task_messages` | Fetch the full conversation/output for a task — what it actually produced |
 | `send_message` | Send a follow-up message to an existing task |
 | `list_tasks` | List all tasks with optional project filter |
 | `create_project` | Create a new project with a name and standing instructions |

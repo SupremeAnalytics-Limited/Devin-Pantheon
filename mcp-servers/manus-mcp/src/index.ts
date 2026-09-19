@@ -164,6 +164,19 @@ export class ManusMCP extends McpAgent<Env> {
     );
 
     this.server.tool(
+      "get_task_messages",
+      "Fetch the full conversation/event history for a task — the actual output Manus produced, " +
+        "not just its status. Use this after get_task shows a task is done to read what it found.",
+      {
+        task_id: z.string().describe("The task ID"),
+        page: z.number().int().positive().optional(),
+        page_size: z.number().int().positive().max(100).optional(),
+      },
+      async ({ task_id, page, page_size }) =>
+        runTool(() => manusRequest(this.env, "GET", "task.listMessages", compact({ task_id, page, page_size })))
+    );
+
+    this.server.tool(
       "send_message",
       "Send a follow-up message to an existing, in-progress or completed task.",
       {
