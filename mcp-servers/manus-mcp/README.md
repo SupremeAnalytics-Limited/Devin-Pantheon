@@ -3,13 +3,20 @@
 A remote [Model Context Protocol](https://modelcontextprotocol.io) server that exposes the
 Manus API (`https://api.manus.ai`) as tools, running on Cloudflare Workers.
 
-> **Endpoint paths are a best-effort mapping.** This server was written without access to a
-> confirmed, current Manus API reference, so it assumes conventional REST paths under `/v1`
-> (e.g. `POST /v1/tasks`, `GET /v1/tasks/:id`) and Bearer-token auth. **Before relying on this in
-> production, check each path and payload shape against Manus's own API docs** and adjust
-> `src/index.ts` if anything differs (the request/response plumbing — auth, error handling, JSON
-> shaping — stays the same either way). `MANUS_API_BASE_URL` is a plain Worker var (see
-> `wrangler.jsonc`) if the base URL needs to change.
+> **Some endpoint shapes are still unconfirmed.** Manus API v2 is an RPC-style surface: every call
+> is a `POST` to `/v2/<resource>.<verb>` with a JSON body, authenticated via the `x-manus-api-key`
+> header (**not** `Authorization: Bearer`) — this was confirmed against
+> [Manus's own docs](https://open.manus.ai/docs/v2/authentication) and by live-testing against a
+> deployed instance. `create_task`, `get_task`, `send_message`, `list_tasks`, `create_project`,
+> `list_projects`, and `list_agents` map to documented endpoints (`task.create`, `task.detail`,
+> `task.sendMessage`, `task.list`, `project.create`, `project.list`, `agent.list`) and have been
+> exercised live. `get_project` (`project.detail`), `get_agent` (`agent.detail`), `list_skills`
+> (`skill.list`), `get_usage` (`credit.balance`), and `upload_file` (`file.upload`) follow the same
+> naming convention but weren't individually confirmed — verify against
+> [the official reference](https://open.manus.im/docs/v2) if one of those returns a 404 or an
+> unexpected shape, and adjust the method name / body in `src/index.ts` (the request/response
+> plumbing — auth, error handling, JSON shaping — stays the same either way).
+> `MANUS_API_BASE_URL` is a plain Worker var (see `wrangler.json`) if the base URL needs to change.
 
 ## Tools
 
