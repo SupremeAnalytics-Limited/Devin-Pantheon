@@ -1,0 +1,32 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "manus-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_OBJECT",
+        "class_name": "ManusMCP"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ManusMCP"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    // Override if Manus documents a different base URL for your account/region.
+    "MANUS_API_BASE_URL": "https://api.manus.ai"
+  }
+  // MANUS_API_KEY is NOT set here. Set it as a secret after deploying:
+  //   npx wrangler secret put MANUS_API_KEY
+  // For local dev, copy .dev.vars.example to .dev.vars and fill in a key.
+  // Never commit the real key to this file or to .dev.vars.
+}

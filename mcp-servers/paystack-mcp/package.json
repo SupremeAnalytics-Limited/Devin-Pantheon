@@ -1,0 +1,22 @@
+{
+  "name": "paystack-mcp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MCP server exposing Paystack API tools, deployed on Cloudflare Workers.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "agents": "^0.0.109",
+    "@modelcontextprotocol/sdk": "^1.13.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "typescript": "^5.7.3",
+    "wrangler": "^3.109.2"
+  }
+}
