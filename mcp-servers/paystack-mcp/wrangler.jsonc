@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "paystack-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2024-11-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "MCP_OBJECT",
+        "class_name": "PaystackMCP"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["PaystackMCP"]
+    }
+  ],
+  "observability": {
+    "enabled": true
+  }
+  // PAYSTACK_SECRET_KEY is NOT set here. Set it as a secret after deploying:
+  //   npx wrangler secret put PAYSTACK_SECRET_KEY
+  // For local dev, copy .dev.vars.example to .dev.vars and fill in a test key.
+  // Never commit the real key to this file or to .dev.vars.
+}
