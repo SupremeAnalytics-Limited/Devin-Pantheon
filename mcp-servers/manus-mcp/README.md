@@ -3,20 +3,23 @@
 A remote [Model Context Protocol](https://modelcontextprotocol.io) server that exposes the
 Manus API (`https://api.manus.ai`) as tools, running on Cloudflare Workers.
 
-> **Some endpoint shapes are still unconfirmed.** Manus API v2 is an RPC-style surface: every call
-> is a `POST` to `/v2/<resource>.<verb>` with a JSON body, authenticated via the `x-manus-api-key`
-> header (**not** `Authorization: Bearer`) — this was confirmed against
-> [Manus's own docs](https://open.manus.ai/docs/v2/authentication) and by live-testing against a
-> deployed instance. `create_task`, `get_task`, `send_message`, `list_tasks`, `create_project`,
-> `list_projects`, and `list_agents` map to documented endpoints (`task.create`, `task.detail`,
-> `task.sendMessage`, `task.list`, `project.create`, `project.list`, `agent.list`) and have been
-> exercised live. `get_project` (`project.detail`), `get_agent` (`agent.detail`), `list_skills`
-> (`skill.list`), `get_usage` (`credit.balance`), and `upload_file` (`file.upload`) follow the same
-> naming convention but weren't individually confirmed — verify against
-> [the official reference](https://open.manus.im/docs/v2) if one of those returns a 404 or an
-> unexpected shape, and adjust the method name / body in `src/index.ts` (the request/response
-> plumbing — auth, error handling, JSON shaping — stays the same either way).
-> `MANUS_API_BASE_URL` is a plain Worker var (see `wrangler.json`) if the base URL needs to change.
+> **API shape, confirmed by live-testing.** Manus API v2 targets `/v2/<resource>.<verb>`,
+> authenticated via the `x-manus-api-key` header (**not** `Authorization: Bearer`). Read-style
+> verbs (`.list`, `.detail`) are **GET** with query params; mutating verbs (`.create`,
+> `.sendMessage`) are **POST** with a JSON body — this split was found by live-testing against a
+> deployed instance (list/detail calls first came back `405 Method Not Allowed` under POST) and
+> cross-checked against [Manus's own docs](https://open.manus.ai/docs/v2/authentication).
+> `create_task`, `get_task`, `send_message`, `list_tasks`, `create_project`, `list_projects`,
+> `list_agents`, and `list_skills` map to endpoints confirmed either by the docs or by a live,
+> successful (non-404/405) call. `get_project` (`project.detail`), `get_agent` (`agent.detail`),
+> and `upload_file` (`file.upload`) follow the same naming convention but weren't individually
+> confirmed. **`get_usage` has no backing endpoint** — Manus's v2 docs list only six resource
+> groups (Tasks, Projects, Files, Webhooks, Skills, Agents), no credits/usage group, and
+> `credit.balance` 404'd in testing; the tool now returns an explanatory error instead of guessing
+> further. If Manus adds one, or you find the real name, point `get_usage`'s handler at it in
+> `src/index.ts` — the request/response plumbing (auth, error handling, JSON shaping) stays the
+> same. `MANUS_API_BASE_URL` is a plain Worker var (see `wrangler.json`) if the base URL needs to
+> change.
 
 ## Tools
 
