@@ -21,8 +21,4 @@
   "observability": {
     "enabled": true
   }
-  // PAYSTACK_SECRET_KEY is NOT set here. Set it as a secret after deploying:
-  //   npx wrangler secret put PAYSTACK_SECRET_KEY
-  // For local dev, copy .dev.vars.example to .dev.vars and fill in a test key.
-  // Never commit the real key to this file or to .dev.vars.
 }

@@ -22,11 +22,6 @@
     "enabled": true
   },
   "vars": {
-    // Override if Manus documents a different base URL for your account/region.
     "MANUS_API_BASE_URL": "https://api.manus.ai"
   }
-  // MANUS_API_KEY is NOT set here. Set it as a secret after deploying:
-  //   npx wrangler secret put MANUS_API_KEY
-  // For local dev, copy .dev.vars.example to .dev.vars and fill in a key.
-  // Never commit the real key to this file or to .dev.vars.
 }
