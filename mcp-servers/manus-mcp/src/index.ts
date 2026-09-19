@@ -39,20 +39,41 @@ async function parseResponse(res: Response): Promise<unknown> {
   return json;
 }
 
+function toQueryString(params: Record<string, unknown>): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value === undefined || value === null || value === "") continue;
+    search.set(key, String(value));
+  }
+  const qs = search.toString();
+  return qs ? `?${qs}` : "";
+}
+
 /**
- * Manus API v2 is an RPC-style surface: every call is a POST to
- * `/v2/<resource>.<verb>` with a JSON body, authenticated via the
- * `x-manus-api-key` header (not `Authorization: Bearer`).
+ * Manus API v2 is an RPC-style surface: every call targets
+ * `/v2/<resource>.<verb>`, authenticated via the `x-manus-api-key` header
+ * (not `Authorization: Bearer`). Read-style verbs (`.list`, `.detail`) are
+ * GET with query params; mutating verbs (`.create`, `.sendMessage`) are
+ * POST with a JSON body — confirmed by live-testing against the real API.
  */
-async function manusRequest(env: Env, method: string, body: Record<string, unknown> = {}): Promise<unknown> {
+async function manusRequest(
+  env: Env,
+  httpMethod: "GET" | "POST",
+  rpcMethod: string,
+  params: Record<string, unknown> = {}
+): Promise<unknown> {
   assertApiKey(env);
-  const res = await fetch(`${baseUrl(env)}/v2/${method}`, {
-    method: "POST",
+  const url =
+    httpMethod === "GET"
+      ? `${baseUrl(env)}/v2/${rpcMethod}${toQueryString(params)}`
+      : `${baseUrl(env)}/v2/${rpcMethod}`;
+  const res = await fetch(url, {
+    method: httpMethod,
     headers: {
       "x-manus-api-key": env.MANUS_API_KEY,
-      "Content-Type": "application/json",
+      ...(httpMethod === "POST" ? { "Content-Type": "application/json" } : {}),
     },
-    body: JSON.stringify(body),
+    body: httpMethod === "POST" ? JSON.stringify(params) : undefined,
   });
   return parseResponse(res);
 }
@@ -129,7 +150,7 @@ export class ManusMCP extends McpAgent<Env> {
       },
       async ({ prompt, project_id }) =>
         runTool(() =>
-          manusRequest(this.env, "task.create", compact({ message: { content: prompt }, project_id }))
+          manusRequest(this.env, "POST", "task.create", compact({ message: { content: prompt }, project_id }))
         )
     );
 
@@ -139,7 +160,7 @@ export class ManusMCP extends McpAgent<Env> {
       {
         task_id: z.string().describe("The task ID"),
       },
-      async ({ task_id }) => runTool(() => manusRequest(this.env, "task.detail", { task_id }))
+      async ({ task_id }) => runTool(() => manusRequest(this.env, "GET", "task.detail", { task_id }))
     );
 
     this.server.tool(
@@ -150,7 +171,9 @@ export class ManusMCP extends McpAgent<Env> {
         message: z.string().describe("The message content"),
       },
       async ({ task_id, message }) =>
-        runTool(() => manusRequest(this.env, "task.sendMessage", { task_id, message: { content: message } }))
+        runTool(() =>
+          manusRequest(this.env, "POST", "task.sendMessage", { task_id, message: { content: message } })
+        )
     );
 
     this.server.tool(
@@ -162,7 +185,7 @@ export class ManusMCP extends McpAgent<Env> {
         page_size: z.number().int().positive().max(100).optional(),
       },
       async ({ project_id, page, page_size }) =>
-        runTool(() => manusRequest(this.env, "task.list", compact({ project_id, page, page_size })))
+        runTool(() => manusRequest(this.env, "GET", "task.list", compact({ project_id, page, page_size })))
     );
 
     this.server.tool(
@@ -173,7 +196,7 @@ export class ManusMCP extends McpAgent<Env> {
         instructions: z.string().optional().describe("Standing instructions applied to tasks in this project"),
       },
       async ({ name, instructions }) =>
-        runTool(() => manusRequest(this.env, "project.create", compact({ name, instructions })))
+        runTool(() => manusRequest(this.env, "POST", "project.create", compact({ name, instructions })))
     );
 
     this.server.tool(
@@ -183,7 +206,8 @@ export class ManusMCP extends McpAgent<Env> {
         page: z.number().int().positive().optional(),
         page_size: z.number().int().positive().max(100).optional(),
       },
-      async ({ page, page_size }) => runTool(() => manusRequest(this.env, "project.list", compact({ page, page_size })))
+      async ({ page, page_size }) =>
+        runTool(() => manusRequest(this.env, "GET", "project.list", compact({ page, page_size })))
     );
 
     this.server.tool(
@@ -192,7 +216,7 @@ export class ManusMCP extends McpAgent<Env> {
       {
         project_id: z.string().describe("The project ID"),
       },
-      async ({ project_id }) => runTool(() => manusRequest(this.env, "project.detail", { project_id }))
+      async ({ project_id }) => runTool(() => manusRequest(this.env, "GET", "project.detail", { project_id }))
     );
 
     this.server.tool(
@@ -217,7 +241,8 @@ export class ManusMCP extends McpAgent<Env> {
         page: z.number().int().positive().optional(),
         page_size: z.number().int().positive().max(100).optional(),
       },
-      async ({ page, page_size }) => runTool(() => manusRequest(this.env, "agent.list", compact({ page, page_size })))
+      async ({ page, page_size }) =>
+        runTool(() => manusRequest(this.env, "GET", "agent.list", compact({ page, page_size })))
     );
 
     this.server.tool(
@@ -226,7 +251,7 @@ export class ManusMCP extends McpAgent<Env> {
       {
         agent_id: z.string().describe("The agent ID"),
       },
-      async ({ agent_id }) => runTool(() => manusRequest(this.env, "agent.detail", { agent_id }))
+      async ({ agent_id }) => runTool(() => manusRequest(this.env, "GET", "agent.detail", { agent_id }))
     );
 
     this.server.tool(
@@ -236,14 +261,21 @@ export class ManusMCP extends McpAgent<Env> {
         page: z.number().int().positive().optional(),
         page_size: z.number().int().positive().max(100).optional(),
       },
-      async ({ page, page_size }) => runTool(() => manusRequest(this.env, "skill.list", compact({ page, page_size })))
+      async ({ page, page_size }) =>
+        runTool(() => manusRequest(this.env, "GET", "skill.list", compact({ page, page_size })))
     );
 
     this.server.tool(
       "get_usage",
       "Fetch current Manus API usage and consumption (credit balance) for the account.",
       {},
-      async () => runTool(() => manusRequest(this.env, "credit.balance"))
+      async () =>
+        errorResult(
+          "Manus's public API v2 does not document a usage/credits endpoint (its docs list only " +
+            "Tasks, Projects, Files, Webhooks, Skills, and Agents as resource groups). Credit usage " +
+            "currently appears to be dashboard-only — check https://open.manus.im/docs/v2 for updates, " +
+            "or contact api-support@manus.ai to confirm."
+        )
     );
   }
 }
