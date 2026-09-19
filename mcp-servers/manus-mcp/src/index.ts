@@ -78,30 +78,40 @@ async function manusRequest(
   return parseResponse(res);
 }
 
-async function manusUpload(
+/**
+ * file.upload is a two-step flow, not a direct multipart POST: first ask
+ * Manus for a file record + presigned S3 upload_url, then PUT the raw bytes
+ * there directly (bypassing the Worker for the actual transfer).
+ */
+async function manusUploadFile(
   env: Env,
-  method: string,
   filename: string,
   contentBase64: string,
-  contentType: string,
-  extraFields: Record<string, string>
-): Promise<unknown> {
-  assertApiKey(env);
+  contentType: string
+): Promise<{ file: { id: string; filename: string }; upload_url: string; upload_expires_at?: string }> {
+  const created = (await manusRequest(env, "POST", "file.upload", { filename })) as {
+    file: { id: string; filename: string };
+    upload_url: string;
+    upload_expires_at?: string;
+  };
+
   const binary = Uint8Array.from(atob(contentBase64), (c) => c.charCodeAt(0));
-  const form = new FormData();
-  form.append("file", new Blob([binary], { type: contentType }), filename);
-  for (const [key, value] of Object.entries(extraFields)) {
-    form.append(key, value);
+  const putRes = await fetch(created.upload_url, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: binary,
+  });
+  if (!putRes.ok) {
+    throw new Error(`Uploading file bytes to Manus's storage failed (HTTP ${putRes.status}): ${putRes.statusText}`);
   }
 
-  const res = await fetch(`${baseUrl(env)}/v2/${method}`, {
-    method: "POST",
-    headers: {
-      "x-manus-api-key": env.MANUS_API_KEY,
-    },
-    body: form,
-  });
-  return parseResponse(res);
+  return created;
+}
+
+/** Builds task.create/task.sendMessage `message.content` — plain text, or a ContentPart array when files are attached. */
+function buildMessageContent(text: string, fileIds?: string[]): unknown {
+  if (!fileIds || fileIds.length === 0) return text;
+  return [{ type: "text", text }, ...fileIds.map((file_id) => ({ type: "file", file_id }))];
 }
 
 function toolResult(data: unknown) {
@@ -143,14 +153,23 @@ export class ManusMCP extends McpAgent<Env> {
   async init() {
     this.server.tool(
       "create_task",
-      "Create a new Manus task from a prompt, optionally scoped to a project.",
+      "Create a new Manus task from a prompt, optionally scoped to a project and with file attachments.",
       {
         prompt: z.string().describe("The instruction/prompt for the task"),
         project_id: z.string().optional().describe("Optional project ID to run the task under"),
+        file_ids: z
+          .array(z.string())
+          .optional()
+          .describe("File IDs from upload_file to attach to this task's initial message"),
       },
-      async ({ prompt, project_id }) =>
+      async ({ prompt, project_id, file_ids }) =>
         runTool(() =>
-          manusRequest(this.env, "POST", "task.create", compact({ message: { content: prompt }, project_id }))
+          manusRequest(
+            this.env,
+            "POST",
+            "task.create",
+            compact({ message: { content: buildMessageContent(prompt, file_ids) }, project_id })
+          )
         )
     );
 
@@ -178,14 +197,18 @@ export class ManusMCP extends McpAgent<Env> {
 
     this.server.tool(
       "send_message",
-      "Send a follow-up message to an existing, in-progress or completed task.",
+      "Send a follow-up message to an existing, in-progress or completed task, optionally with file attachments.",
       {
         task_id: z.string().describe("The task ID to message"),
         message: z.string().describe("The message content"),
+        file_ids: z.array(z.string()).optional().describe("File IDs from upload_file to attach to this message"),
       },
-      async ({ task_id, message }) =>
+      async ({ task_id, message, file_ids }) =>
         runTool(() =>
-          manusRequest(this.env, "POST", "task.sendMessage", { task_id, message: { content: message } })
+          manusRequest(this.env, "POST", "task.sendMessage", {
+            task_id,
+            message: { content: buildMessageContent(message, file_ids) },
+          })
         )
     );
 
@@ -234,17 +257,15 @@ export class ManusMCP extends McpAgent<Env> {
 
     this.server.tool(
       "upload_file",
-      "Upload a file as an attachment to an existing task. Provide the file content base64-encoded.",
+      "Upload a file to Manus (base64-encoded content). Returns a file_id — pass it in create_task's or " +
+        "send_message's file_ids to attach it to a task. Uploaded files are auto-deleted after 48 hours.",
       {
-        task_id: z.string().describe("The task ID to attach the file to"),
         filename: z.string().describe("The file name, including extension"),
         content_base64: z.string().describe("Base64-encoded file content"),
         content_type: z.string().optional().default("application/octet-stream").describe("MIME type of the file"),
       },
-      async ({ task_id, filename, content_base64, content_type }) =>
-        runTool(() =>
-          manusUpload(this.env, "file.upload", filename, content_base64, content_type, { task_id })
-        )
+      async ({ filename, content_base64, content_type }) =>
+        runTool(() => manusUploadFile(this.env, filename, content_base64, content_type))
     );
 
     this.server.tool(
@@ -289,6 +310,28 @@ export class ManusMCP extends McpAgent<Env> {
             "currently appears to be dashboard-only — check https://open.manus.im/docs/v2 for updates, " +
             "or contact api-support@manus.ai to confirm."
         )
+    );
+
+    this.server.tool(
+      "create_webhook",
+      "Register a webhook URL to receive push notifications when a task's state changes.",
+      { url: z.string().describe("HTTPS endpoint that will receive POST webhook notifications; must return 2xx") },
+      async ({ url }) => runTool(() => manusRequest(this.env, "POST", "webhook.create", { url }))
+    );
+
+    this.server.tool(
+      "list_webhooks",
+      "List registered webhooks. (Endpoint name inferred from the same convention as other list calls — " +
+        "not individually confirmed; verify if this 404s.)",
+      { page: z.number().int().positive().optional(), page_size: z.number().int().positive().max(100).optional() },
+      async ({ page, page_size }) => runTool(() => manusRequest(this.env, "GET", "webhook.list", compact({ page, page_size })))
+    );
+
+    this.server.tool(
+      "delete_webhook",
+      "Delete a webhook. The endpoint stops receiving notifications immediately.",
+      { webhook_id: z.string() },
+      async ({ webhook_id }) => runTool(() => manusRequest(this.env, "POST", "webhook.delete", { webhook_id }))
     );
   }
 }

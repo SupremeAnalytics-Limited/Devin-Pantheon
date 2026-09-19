@@ -5,24 +5,34 @@ A remote [Model Context Protocol](https://modelcontextprotocol.io) server that e
 
 ## Tools
 
-| Tool | Description |
-|---|---|
-| `get_balance` | Fetch the current Paystack balance |
-| `list_transactions` | List transactions, filterable by date range / status / customer |
-| `get_transaction` | Fetch a single transaction by ID or reference |
-| `list_settlements` | Fetch all settlements |
-| `get_settlement_transactions` | Fetch transactions for a specific settlement |
-| `create_transfer_recipient` | Create a bank account recipient |
-| `list_recipients` | List all transfer recipients |
-| `initiate_transfer` | Send money to a recipient |
-| `bulk_transfer` | Initiate multiple transfers at once |
-| `get_transfer` | Fetch status of a specific transfer |
-| `list_transfers` | List all transfers with filters |
-| `create_refund` | Initiate a refund for a transaction |
-| `list_customers` | List all customers |
-| `get_customer` | Fetch a single customer by email or code |
-| `create_split` | Create a payment split configuration |
-| `list_splits` | List all payment splits |
+Full coverage of Paystack's public REST API (~110 tools), grouped by resource:
+
+- **Transactions** — `initialize_transaction`, `list_transactions`, `get_transaction`, `verify_transaction`, `charge_authorization`, `view_transaction_timeline`, `get_transaction_totals`, `export_transactions`, `partial_debit`
+- **Transaction Splits** — `create_split`, `list_splits`, `get_split`, `update_split`, `add_split_subaccount`, `remove_split_subaccount`
+- **Customers** — `list_customers`, `get_customer`, `create_customer`, `update_customer`, `validate_customer`, `set_customer_risk_action`, `deactivate_authorization`
+- **Dedicated Virtual Accounts** — `create_dedicated_account`, `assign_dedicated_account`, `list_dedicated_accounts`, `get_dedicated_account`, `deactivate_dedicated_account`, `split_dedicated_account`, `remove_dedicated_account_split`, `list_dedicated_account_providers`
+- **Subaccounts** — `create_subaccount`, `list_subaccounts`, `get_subaccount`, `update_subaccount`
+- **Plans & Subscriptions** — `create_plan`, `list_plans`, `get_plan`, `update_plan`, `create_subscription`, `list_subscriptions`, `get_subscription`, `enable_subscription`, `disable_subscription`, `generate_subscription_update_link`, `send_subscription_update_link`
+- **Products & Payment Pages** — `create_product`, `list_products`, `get_product`, `update_product`, `create_payment_page`, `list_payment_pages`, `get_payment_page`, `update_payment_page`, `check_payment_page_slug`, `add_products_to_page`
+- **Invoices** — `create_invoice`, `list_invoices`, `get_invoice`, `verify_invoice`, `send_invoice_notification`, `get_invoice_totals`, `finalize_invoice`, `update_invoice`, `archive_invoice`
+- **Settlements** — `list_settlements`, `get_settlement_transactions`
+- **Transfer Recipients** — `create_transfer_recipient`, `bulk_create_transfer_recipients`, `list_recipients`, `get_transfer_recipient`, `update_transfer_recipient`, `delete_transfer_recipient`
+- **Transfers** — `initiate_transfer`, `bulk_transfer`, `get_transfer`, `list_transfers`, `finalize_transfer`, `verify_transfer`, `fetch_balance_ledger`, `resend_transfer_otp`, `disable_transfer_otp`, `enable_transfer_otp`, `finalize_disable_transfer_otp`
+- **Bulk Charges** — `initiate_bulk_charge`, `list_bulk_charges`, `get_bulk_charge`, `pause_bulk_charge`, `resume_bulk_charge`, `list_bulk_charge_units`
+- **Direct Charge** — `create_charge`, `submit_pin`, `submit_otp`, `submit_phone`, `submit_birthday`, `submit_address`, `check_pending_charge`
+- **Disputes** — `list_disputes`, `get_dispute`, `list_transaction_disputes`, `update_dispute`, `add_dispute_evidence`, `get_dispute_upload_url`, `resolve_dispute`, `export_disputes`
+- **Refunds** — `create_refund`, `list_refunds`, `get_refund`
+- **Verification & Misc** — `resolve_account_number`, `validate_account`, `resolve_card_bin`, `list_banks`, `list_countries`, `list_states`
+- **Apple Pay** — `register_apple_pay_domain`, `list_apple_pay_domains`, `unregister_apple_pay_domain`
+- **Terminal (POS)** — `send_terminal_event`, `fetch_terminal_event_status`, `fetch_terminal_status`, `list_terminals`, `fetch_terminal`, `update_terminal`, `commission_terminal`, `decommission_terminal`
+- **Account** — `get_balance`
+
+All tools are live-tested for correctness of the request/response plumbing; `get_balance` and the
+transaction/customer/split reads have been exercised against a real account. Endpoints requiring
+side effects with real money (transfers, charges) or specific setup (disputes, terminals, Apple
+Pay domains) follow Paystack's documented request/response shapes but weren't individually
+exercised live — verify against [Paystack's API reference](https://paystack.com/docs/api/) if one
+behaves unexpectedly.
 
 ## Setup
 
